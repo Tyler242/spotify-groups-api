@@ -3,10 +3,8 @@ import connect from '../models/connect'
 import UserModel from '../models/User'
 import { sign } from 'jsonwebtoken'
 import type TokenObject from '../models/TokenObject'
-import { config } from 'dotenv'
 import { compare, hash } from 'bcrypt'
 
-config()
 
 export async function signup(req: Request, res: Response, next: NextFunction) {
     const email = req.body.email
