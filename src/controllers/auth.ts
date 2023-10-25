@@ -1,113 +1,122 @@
-import type { NextFunction, Request, Response } from 'express'
-import connect from '../models/connect'
-import UserModel from '../models/User'
-import { sign } from 'jsonwebtoken'
-import type TokenObject from '../models/TokenObject'
-import { compare, hash } from 'bcrypt'
-
+import type { NextFunction, Request, Response } from "express";
+import connect from "../models/connect";
+import User, { IUser } from "../models/database/User";
+import { sign } from "jsonwebtoken";
+import type TokenObject from "../models/TokenObject";
+import { compare, hash } from "bcrypt";
+import { convertToSafeUser } from "../models/server/UserSeverModel";
 
 export async function signup(req: Request, res: Response, next: NextFunction) {
-    const email = req.body.email
-    const password = req.body.password
-    const spotifyUuid = req.body.spotifyUuid
+    const email = req.body.email;
+    const password = req.body.password;
+    const spotifyUuid = req.body.spotifyUuid;
 
     if (!password || !spotifyUuid || !email) {
-        const err = new Error('Invalid Body')
-        next(err)
+        const err = new Error("Invalid Body");
+        return next(err);
     }
 
-    const db = await connect()
-    const userExists = await db.model('User').findOne({ email, spotify_uuid: spotifyUuid })
+    await connect();
+    const userExists: IUser | null = await User.findOne({
+        email,
+        spotify_uuid: spotifyUuid,
+    });
     if (userExists) {
-        next(Error('User aleady exists')); return
+        return next(Error("User aleady exists"));
     }
 
-    let hashedPassword: string
+    let hashedPassword: string;
     try {
-        hashedPassword = await hashPassword(password)
+        hashedPassword = await hashPassword(password);
     } catch (err) {
-        next(err); return
+        return next(err);
     }
 
-    const userModel = new UserModel({
+    const userModel: IUser = new User({
         email,
         password: hashedPassword,
-        spotify_uuid: spotifyUuid
-    })
+        spotify_uuid: spotifyUuid,
+    });
 
-    const user = await db.model('User').create(userModel)
+    const user: IUser = await User.create(userModel);
 
-    let tokenObject: TokenObject
-    try {
-        tokenObject = createJwtToken(user)
-    } catch (err) {
-        next(err); return
-    }
-
-    const userWithToken = await db.model('User').findByIdAndUpdate(user._id, { auth_token: tokenObject }, { returnDocument: 'after' })
-
-    return res.status(201).json({ userId: userWithToken._id, token: userWithToken.auth_token.token })
+    return res.status(201).json(convertToSafeUser(user));
 }
 
-export async function authenticate(req: Request, res: Response, next: NextFunction) {
-    const email = req.body.email
-    const password = req.body.password
-    const spotifyUuid = req.body.spotifyUuid
+export async function authenticate(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    const email = req.body.email;
+    const password = req.body.password;
+    const spotifyUuid = req.body.spotifyUuid;
 
-    const db = await connect()
-    const user = await db.model('User').findOne({ email, spotify_uuid: spotifyUuid })
+    await connect();
+    const user: IUser | null = await User.findOne({
+        email,
+        spotify_uuid: spotifyUuid,
+    });
     if (!user) {
-        next(Error('User doesn\'t exist')); return
+        return next(Error("User doesn't exist"));
     }
 
-    const isValidPassword = await comparePassword(password, user.password)
+    const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
-        next(Error('Invalid Username & Password combination')); return
+        return next(Error("Invalid Username & Password combination"));
     }
 
-    let tokenObject: TokenObject
+    let tokenObject: TokenObject;
     try {
-        tokenObject = createJwtToken(user)
+        tokenObject = createJwtToken(user);
     } catch (err) {
-        next(err); return
+        next(err);
+        return;
     }
 
-    const userWithUpdatedToken = await db.model('User').findByIdAndUpdate(user._id, { auth_token: tokenObject }, { returnDocument: 'after' })
+    const updatedUser: IUser | null = await User.findByIdAndUpdate(
+        user._id,
+        { auth_token: tokenObject },
+        { returnDocument: "after" },
+    );
 
-    return res.status(201).json({ userId: userWithUpdatedToken._id, token: userWithUpdatedToken.auth_token.token })
+    return res.status(201).json(convertToSafeUser(updatedUser!));
 }
 
 export function refresh() {
-    console.log('TODO refresh')
+    console.log("TODO refresh");
 }
 
-function createJwtToken(user: any): TokenObject {
+function createJwtToken(user: IUser): TokenObject {
     const tokenObj: TokenObject = {
-        token: '',
-        expires_in_minutes: 0
-    }
+        token: "",
+        expires_in_minutes: 0,
+    };
 
-    const expires_in = '2h'
+    const expires_in = "2h";
     tokenObj.token = sign(
         {
             userId: user._id,
             spotifyUuid: user.spotify_uuid,
-            email: user.email
+            email: user.email,
         },
         process.env.jwt_secret!,
         {
-            expiresIn: expires_in
-        }
-    )
-    tokenObj.expires_in_minutes = 120
+            expiresIn: expires_in,
+        },
+    );
+    tokenObj.expires_in_minutes = 120;
 
-    return tokenObj
+    return tokenObj;
 }
 
 async function hashPassword(password: string): Promise<string> {
-    return await hash(password, 12)
+    return await hash(password, 12);
 }
 
-async function comparePassword(password: string, hashedPassword: string): Promise<boolean> {
-    return await compare(password, hashedPassword)
+async function comparePassword(
+    password: string,
+    hashedPassword: string,
+): Promise<boolean> {
+    return await compare(password, hashedPassword);
 }

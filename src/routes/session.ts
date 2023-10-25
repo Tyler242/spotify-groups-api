@@ -1,8 +1,8 @@
-import express from 'express'
-import validateToken from '../middleware/auth'
+import express from "express";
+import validateToken from "../middleware/auth";
 
-const router = express.Router()
+const router = express.Router();
 
-router.get('/', validateToken)
+router.get("/", validateToken);
 
-export default router
+export default router;
