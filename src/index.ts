@@ -5,6 +5,7 @@ import { config } from "dotenv";
 
 import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
+import { ErrorResult } from "./models/server/Error";
 
 declare module "express-session" {
   interface SessionData {
@@ -14,7 +15,7 @@ declare module "express-session" {
 }
 
 const app = express();
-const port = "4200";
+const port = "4200" || process.env.PORT;
 
 config();
 
@@ -34,8 +35,8 @@ app.get("/", (req, res, next) => {
   res.status(200).json({ message: "Hello World" });
 });
 
-app.use((err: any, req: Request, res: Response) => {
-  return res.status(500).json(err);
+app.use((err: ErrorResult, req: Request, res: Response) => {
+  return res.status(500).json();
 });
 
 app.listen(port, () => {

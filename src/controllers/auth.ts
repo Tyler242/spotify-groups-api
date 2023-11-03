@@ -5,70 +5,46 @@ import { sign } from "jsonwebtoken";
 import type TokenObject from "../models/TokenObject";
 import { convertToSafeUser } from "../models/server/UserSeverModel";
 import mongoose from "mongoose";
-
-export async function signup(req: Request, res: Response, next: NextFunction) {
-    const email = req.body.email;
-    const spotifyUuid = req.body.spotifyUuid;
-
-    if (!spotifyUuid || !email) {
-        const err = new Error("Invalid Body");
-        return next(err);
-    }
-
-    await connect();
-    const userExists: IUser | null = await User.findOne({
-        email,
-        spotify_uuid: spotifyUuid,
-    });
-    if (userExists) {
-        return next(Error("User aleady exists"));
-    }
-
-
-    const userModel: IUser = new User({
-        email,
-        spotify_uuid: spotifyUuid,
-    });
-
-    const user: IUser = await User.create(userModel);
-
-    mongoose.disconnect();
-    return res.status(201).json(convertToSafeUser(user));
-}
+import { ErrorResult, HttpStatusCode, internalServerError } from "../models/server/Error";
 
 export async function authenticate(
     req: Request,
     res: Response,
     next: NextFunction,
 ) {
+    console.log('request');
     const email = req.body.email;
     const spotifyUuid = req.body.spotifyUuid;
 
-    await connect();
-    const user: IUser | null = await User.findOne({
+    if (!spotifyUuid || !email) {
+        const err: ErrorResult = { message: "Invalid request body", code: HttpStatusCode.BAD_REQUEST };
+        return next(err);
+    }
+
+    try {
+        await connect();
+    } catch (err) {
+        return next(internalServerError());
+    }
+
+    let user: IUser | null = await User.findOne({
         email,
         spotify_uuid: spotifyUuid,
     });
-    if (!user) {
-        return next(Error("User doesn't exist"));
-    }
 
-    let tokenObject: TokenObject;
+    let loggedInUser: IUser;
+
     try {
-        tokenObject = createJwtToken(user);
+        if (!user) {
+            user = await createUser(email, spotifyUuid);
+        }
+        loggedInUser = (await loginUser(user))!;
+
+        mongoose.disconnect();
+        return res.status(201).json(convertToSafeUser(loggedInUser));
     } catch (err) {
-        next(err);
-        return;
+        return next(internalServerError());
     }
-
-    const updatedUser: IUser | null = await User.findByIdAndUpdate(
-        user._id,
-        { auth_token: tokenObject },
-        { returnDocument: "after" },
-    );
-
-    mongoose.disconnect();
-    return res.status(201).json(convertToSafeUser(updatedUser!));
 }
 
 export function refresh() {
@@ -98,13 +74,24 @@ function createJwtToken(user: IUser): TokenObject {
     return tokenObj;
 }
 
-// async function hashPassword(password: string): Promise<string> {
-//     return await hash(password, 12);
-// }
+async function loginUser(user: IUser) {
+    let tokenObject = createJwtToken(user);
 
-// async function comparePassword(
-//     password: string,
-//     hashedPassword: string,
-// ): Promise<boolean> {
-//     return await compare(password, hashedPassword);
-// }
+    const updatedUser: IUser | null = await User.findByIdAndUpdate(
+        user._id,
+        { auth_token: tokenObject },
+        { returnDocument: "after" },
+    );
+
+    return updatedUser
+}
+
+async function createUser(email: string, spotifyUuid: string) {
+    const userModel: IUser = new User({
+        email,
+        spotify_uuid: spotifyUuid,
+    });
+
+    const user: IUser = await User.create(userModel);
+    return user;
+}
