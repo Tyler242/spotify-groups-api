@@ -3,7 +3,6 @@ const Schema = mongoose.Schema;
 
 export interface IUser extends mongoose.Document {
   email: string;
-  password: string;
   spotify_uuid: string;
   auth_token: {
     token: string;
@@ -13,10 +12,6 @@ export interface IUser extends mongoose.Document {
 
 const userSchema = new Schema({
   email: {
-    type: String,
-    required: true,
-  },
-  password: {
     type: String,
     required: true,
   },
