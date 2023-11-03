@@ -1,6 +1,6 @@
 interface TokenObject {
-    token: string
-    expires_in_minutes: number
+  token: string;
+  expires_in_minutes: number;
 }
 
-export default TokenObject
+export default TokenObject;

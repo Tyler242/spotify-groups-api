@@ -1,17 +1,22 @@
-import { type NextFunction, type Request, type Response } from 'express'
+import { type NextFunction, type Request, type Response } from "express";
+import { type JwtPayload, verify } from "jsonwebtoken";
 
-export default async function validateToken(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization!
-  const refreh_token = req.headers.refresh_token
-
-  const token = authHeader.split('Bearer ')[1]
+export default async function validateToken(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<Response<unknown, Record<string, unknown>> | undefined> {
+  const token = req.headers.authorization!;
   if (!token) {
-    next(Error('Invalid Token'))
+    next(Error("Invalid Token"));
   }
 
-  if (token !== req.session.token) {
-    if (refreh_token !== req.session.refresh_token) {
-      next(Error('Invalid Token'))
-    }
+  let decodedToken: string | JwtPayload;
+  try {
+    decodedToken = verify(token, process.env.jwt_secret!);
+  } catch (err) {
+    next(err);
+    return;
   }
+  return res.status(200).json({ message: "success" });
 }
