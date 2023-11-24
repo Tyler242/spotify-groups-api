@@ -3,6 +3,6 @@ import validateToken from "../middleware/auth";
 
 const router = express.Router();
 
-router.get("/", validateToken);
+router.post("/",);
 
 export default router;

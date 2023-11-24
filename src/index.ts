@@ -5,7 +5,9 @@ import { config } from "dotenv";
 
 import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
+import queueRoutes from "./routes/queue";
 import { ErrorResult } from "./models/server/Error";
+import validateToken from "./middleware/auth";
 
 declare module "express-session" {
   interface SessionData {
@@ -30,6 +32,7 @@ app.use(
 
 app.use("/auth", authRoutes);
 app.use("/session", sessionRoutes);
+app.use("/queue", queueRoutes);
 
 app.get("/", (req, res, next) => {
   res.status(200).json({ message: "Hello World" });

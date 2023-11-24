@@ -38,9 +38,9 @@ export async function authenticate(
         if (!user) {
             user = await createUser(email, spotifyUuid);
         }
-        loggedInUser = (await loginUser(user))!;
+        loggedInUser = await loginUser(user);
 
-        mongoose.disconnect();
+        await mongoose.disconnect();
         return res.status(201).json(convertToSafeUser(loggedInUser));
     } catch (err) {
         return next(internalServerError());
@@ -82,6 +82,9 @@ async function loginUser(user: IUser) {
         { auth_token: tokenObject },
         { returnDocument: "after" },
     );
+    if (!updatedUser) {
+        throw new Error("Unable to Login");
+    }
 
     return updatedUser
 }
