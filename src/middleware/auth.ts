@@ -1,8 +1,6 @@
 import { type NextFunction, type Request, type Response } from "express";
 import { type JwtPayload, verify, decode } from "jsonwebtoken";
 import User, { IUser } from "../models/database/User";
-import connect from "../models/connect";
-import mongoose from "mongoose";
 
 export interface ExtendedJwtPayload extends JwtPayload {
   userId: String;
@@ -28,9 +26,7 @@ export default async function validateToken(
     }
 
     // validate the user
-    await connect();
     const user: IUser | null = await User.findById(userId);
-    await mongoose.disconnect();
     if (!user) {
       throw new Error("User doesn't exist");
     }

@@ -8,6 +8,7 @@ import sessionRoutes from "./routes/session";
 import queueRoutes from "./routes/queue";
 import { ErrorResult } from "./models/server/Error";
 import validateToken from "./middleware/auth";
+import mongoose from "mongoose";
 
 declare module "express-session" {
   interface SessionData {
@@ -42,6 +43,17 @@ app.use((err: ErrorResult, req: Request, res: Response) => {
   return res.status(500).json();
 });
 
-app.listen(port, () => {
-  console.log(`Listening on port: ${port}`);
-});
+const MONGO_URI = process.env.MONGO_URI!;
+const MONGO_USERNAME = process.env.MONGO_USERNAME!;
+const MONGO_PASSWORD = process.env.MONGO_PASSWORD!;
+
+const connectionUri = MONGO_URI.replace("<username>", MONGO_USERNAME).replace(
+  "<password>",
+  MONGO_PASSWORD,
+);
+
+mongoose.connect(connectionUri).then(result => {
+  app.listen(port, () => {
+    console.log(`Listening on port: ${port}`);
+  });
+}).catch(err => console.error);

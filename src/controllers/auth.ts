@@ -1,10 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
-import connect from "../models/connect";
 import User, { IUser } from "../models/database/User";
 import { sign } from "jsonwebtoken";
 import type TokenObject from "../models/TokenObject";
 import { convertToSafeUser } from "../models/server/UserSeverModel";
-import mongoose from "mongoose";
 import { ErrorResult, HttpStatusCode, internalServerError } from "../models/server/Error";
 
 export async function authenticate(
@@ -12,19 +10,12 @@ export async function authenticate(
     res: Response,
     next: NextFunction,
 ) {
-    console.log('request');
     const email = req.body.email;
     const spotifyUuid = req.body.spotifyUuid;
 
     if (!spotifyUuid || !email) {
         const err: ErrorResult = { message: "Invalid request body", code: HttpStatusCode.BAD_REQUEST };
         return next(err);
-    }
-
-    try {
-        await connect();
-    } catch (err) {
-        return next(internalServerError());
     }
 
     let user: IUser | null = await User.findOne({
@@ -40,7 +31,6 @@ export async function authenticate(
         }
         loggedInUser = await loginUser(user);
 
-        await mongoose.disconnect();
         return res.status(201).json(convertToSafeUser(loggedInUser));
     } catch (err) {
         return next(internalServerError());

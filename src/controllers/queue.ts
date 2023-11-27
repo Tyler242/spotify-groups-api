@@ -1,7 +1,5 @@
 import { NextFunction, Request, Response } from "express";
 import Queue, { IQueue } from "../models/database/Queue";
-import connect from "../models/connect";
-import mongoose from "mongoose";
 
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
@@ -10,8 +8,6 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
             throw new Error("Internal Server Error");
         }
         const queueId = req.params.queueId;
-
-        await connect();
 
         // get the queue
         let queueObj: IQueue | null = await Queue.findById(queueId);
@@ -27,7 +23,6 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         queueObj.queue.push(req.body.trackId);
         queueObj = await queueObj.save();
 
-        await mongoose.disconnect();
         return res.status(200).json({ queue: queueObj.queue });
     } catch (err) {
         return next(err);
@@ -42,13 +37,10 @@ export async function getQueue(req: Request, res: Response, next: NextFunction) 
         }
         const queueId = req.params.queueId;
 
-        await connect();
-
         const queue: IQueue | null = await Queue.findById(queueId);
         if (!queue) {
             throw new Error("Unable to find Queue");
         }
-        await mongoose.disconnect();
 
         // is current user part of this queue?
         if (!queue.participantIds.includes(userId)) {
@@ -67,8 +59,6 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
             throw new Error("Internal Server Error");
         }
 
-        await connect();
-
         // check for an existing queue
         let queue: IQueue | null = await Queue.findOne({ creatorId: userId });
 
@@ -81,7 +71,6 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
             queue = await queue.save();
         }
 
-        await mongoose.disconnect();
         return res.status(201).json(queue);
     } catch (err) {
         return next(err);
