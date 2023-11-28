@@ -6,8 +6,8 @@ import { config } from "dotenv";
 import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
 import queueRoutes from "./routes/queue";
+import secretRoutes from "./routes/secrets";
 import { ErrorResult } from "./models/server/Error";
-import validateToken from "./middleware/auth";
 import mongoose from "mongoose";
 
 declare module "express-session" {
@@ -34,6 +34,7 @@ app.use(
 app.use("/auth", authRoutes);
 app.use("/session", sessionRoutes);
 app.use("/queue", queueRoutes);
+app.use("/secrets", secretRoutes);
 
 app.get("/", (req, res, next) => {
   res.status(200).json({ message: "Hello World" });

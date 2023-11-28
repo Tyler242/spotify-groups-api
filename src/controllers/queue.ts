@@ -77,6 +77,39 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
     }
 }
 
+export async function removeFromQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+        const trackId = req.params.trackId;
+
+        // get the queue
+        let queueObj: IQueue | null = await Queue.findById(queueId);
+        if (!queueObj) {
+            throw new Error("Unable to find Queue");
+        }
+
+        // is current user part of this queue?
+        if (!queueObj.participantIds.includes(userId)) {
+            throw new Error("Unauthorized");
+        }
+
+        if (queueObj.queue.includes(trackId)) {
+            queueObj.queue = queueObj.queue.filter(track => track !== trackId);
+            let queue = await queueObj.save();
+            return res.status(200).json(queue);
+        } else {
+            return res.status(200).json(queueObj);
+        }
+    } catch (err) {
+        return next(err);
+    }
+
+}
+
 export async function joinQueue(req: Request, res: Response, next: NextFunction) {
 
 }
