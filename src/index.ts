@@ -7,7 +7,6 @@ import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
 import queueRoutes from "./routes/queue";
 import secretRoutes from "./routes/secrets";
-import { ErrorResult } from "./models/server/Error";
 import mongoose from "mongoose";
 
 declare module "express-session" {
@@ -40,8 +39,8 @@ app.get("/", (req, res, next) => {
   res.status(200).json({ message: "Hello World" });
 });
 
-app.use((err: ErrorResult, req: Request, res: Response) => {
-  return res.status(500).json();
+app.use((err: any, req: Request, res: Response) => {
+  res.status(500).json(err);
 });
 
 const MONGO_URI = process.env.MONGO_URI!;

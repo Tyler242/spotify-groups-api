@@ -107,7 +107,50 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
     } catch (err) {
         return next(err);
     }
+}
 
+export async function moveInQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+        const trackId = req.params.trackId;
+        const index = parseInt(req.params.index);
+
+        // get the queue
+        let queueObj: IQueue | null = await Queue.findById(queueId);
+        if (!queueObj) {
+            throw new Error("Unable to find Queue");
+        }
+
+        // is current user part of this queue?
+        if (!queueObj.participantIds.includes(userId)) {
+            throw new Error("Unauthorized");
+        }
+
+        // is the track in the queue?
+        if (queueObj.queue.includes(trackId)) {
+
+            // remove track
+            queueObj.queue = queueObj.queue.filter(track => track !== trackId);
+            // insert by creating a new array out of the old array
+            queueObj.queue = [
+                ...queueObj.queue.slice(0, index),
+                trackId,
+                ...queueObj.queue.slice(index)
+            ];
+            let queue = await queueObj.save();
+
+            return res.status(200).json(queue);
+        } else {
+            throw new Error("Track is not in queueu");
+        }
+    } catch (err) {
+        console.error(err);
+        return next(err);
+    }
 }
 
 export async function joinQueue(req: Request, res: Response, next: NextFunction) {
