@@ -109,15 +109,14 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
     }
 }
 
-export async function moveInQueue(req: Request, res: Response, next: NextFunction) {
+export async function updateQueue(req: Request, res: Response, next: NextFunction) {
     try {
         const userId = req.userId;
         if (!userId) {
             throw new Error("Internal Server Error");
         }
         const queueId = req.params.queueId;
-        const trackId = req.params.trackId;
-        const index = parseInt(req.params.index);
+        const queue = req.body.queue;
 
         // get the queue
         let queueObj: IQueue | null = await Queue.findById(queueId);
@@ -131,22 +130,10 @@ export async function moveInQueue(req: Request, res: Response, next: NextFunctio
         }
 
         // is the track in the queue?
-        if (queueObj.queue.includes(trackId)) {
+        queueObj.queue = queue;
+        let newQueue = await queueObj.save();
 
-            // remove track
-            queueObj.queue = queueObj.queue.filter(track => track !== trackId);
-            // insert by creating a new array out of the old array
-            queueObj.queue = [
-                ...queueObj.queue.slice(0, index),
-                trackId,
-                ...queueObj.queue.slice(index)
-            ];
-            let queue = await queueObj.save();
-
-            return res.status(200).json(queue);
-        } else {
-            throw new Error("Track is not in queueu");
-        }
+        return res.status(200).json(newQueue);
     } catch (err) {
         console.error(err);
         return next(err);
