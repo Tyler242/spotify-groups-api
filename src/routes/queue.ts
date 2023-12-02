@@ -8,9 +8,9 @@ router.post('/', validateToken, createQueue);
 
 router.get('/:queueId', validateToken, getQueue);
 
-router.put('/:queueId/:trackId/:index', validateToken, updateQueue);
+router.post('/:queueId', validateToken, addToQueue);
 
-router.put('/:queueId', validateToken, addToQueue);
+router.put('/:queueId/:trackId/:index', validateToken, updateQueue);
 
 router.delete('/:queueId/:trackId', validateToken, removeFromQueue);
 
