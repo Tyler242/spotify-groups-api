@@ -21,6 +21,9 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         }
 
         queueObj.queue.push(req.body.trackId);
+        if (queueObj.queue.length == 1) {
+            queueObj.currentTrack = req.body.trackId;
+        }
         queueObj = await queueObj.save();
 
         return res.status(200).json({ queue: queueObj.queue });
@@ -171,8 +174,61 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
         }
 
         queue.queue.shift();
+        queue.currentTrack = queue.queue[0];
         queue = await queue.save();
 
+        return res.status(200).json(queue);
+    } catch (err) {
+        return next(err);
+    }
+}
+
+export async function pauseQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            throw new Error("Unable to find Queue");
+        }
+
+        // is current user part of this queue?
+        if (!queue.participantIds.includes(userId)) {
+            throw new Error("Unauthorized");
+        }
+
+        queue.isPaused = true;
+        queue = await queue.save();
+        return res.status(200).json(queue);
+    } catch (err) {
+        return next(err);
+    }
+}
+
+export async function playQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            throw new Error("Unable to find Queue");
+        }
+
+        // is current user part of this queue?
+        if (!queue.participantIds.includes(userId)) {
+            throw new Error("Unauthorized");
+        }
+
+        queue.isPaused = false;
+        queue = await queue.save();
         return res.status(200).json(queue);
     } catch (err) {
         return next(err);

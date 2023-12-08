@@ -5,6 +5,9 @@ export interface IQueue extends mongoose.Document {
     queue: string[];
     creatorId: string;
     participantIds: string[];
+    isPaused: boolean;
+    currentTrack: string;
+    positionMs: number;
 };
 
 const queueSchema = new Schema({
@@ -13,7 +16,13 @@ const queueSchema = new Schema({
         type: String,
         required: true
     },
-    participantIds: [String]
+    participantIds: [String],
+    isPaused: {
+        type: Boolean,
+        default: true
+    },
+    currentTrack: String,
+    positionMs: Number
 });
 
 const Queue = mongoose.model<IQueue>("Queue", queueSchema);
