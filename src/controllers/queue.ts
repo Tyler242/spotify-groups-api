@@ -174,7 +174,7 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
         }
 
         queue.queue.shift();
-        queue.currentTrack = queue.queue[0];
+        queue.currentTrack = queue.queue[0] || null;
         queue = await queue.save();
 
         return res.status(200).json(queue);

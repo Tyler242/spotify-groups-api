@@ -6,7 +6,7 @@ export interface IQueue extends mongoose.Document {
     creatorId: string;
     participantIds: string[];
     isPaused: boolean;
-    currentTrack: string;
+    currentTrack: string | null;
     positionMs: number;
 };
 
