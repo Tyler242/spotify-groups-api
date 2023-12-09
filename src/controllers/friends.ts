@@ -8,7 +8,7 @@ export async function addFriend(req: Request, res: Response, next: NextFunction)
             throw new Error("Unauthorized");
         }
 
-        const friendUserId = req.params.friendUserId;
+        const friendUserId = req.body.friendUserId;
         let friend: IUser | null = await User.findById(friendUserId);
         if (!friend) {
             throw new Error("User doesn't exist");
@@ -87,7 +87,7 @@ export async function removeFriend(req: Request, res: Response, next: NextFuncti
 export async function searchUsers(req: Request, res: Response, next: NextFunction) {
     try {
         const query = req.body.query;
-        const users: IUser[] = await User.find({ "name": `\/${query}\/` }).select("_id name").exec();
+        const users: IUser[] = await User.find({ name: new RegExp(query, "i") }).select("_id name").exec();
 
         return res.status(200).json(users);
     } catch (err) {
