@@ -248,6 +248,14 @@ export async function deleteQueue(req: Request, res: Response, next: NextFunctio
         if (!queue) {
             throw new Error("Unable to find Queue");
         }
+
+        if (userId !== queue.creatorId) {
+            throw new Error("Only queue creator can delete the queue");
+        }
+
+        await queue.deleteOne();
+
+        return res.status(200).json({ success: true });
     } catch (err) {
         return next(err);
     }
@@ -280,5 +288,101 @@ export async function getFriendQueues(req: Request, res: Response, next: NextFun
 }
 
 export async function joinQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
 
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            throw new Error("Unable to find Queue");
+        }
+
+        // let creator: IUser | null = await User.findById(queue.creatorId).select("friends").exec();
+        // if (!creator) {
+        //     throw new Error("Internal Server Error");
+        // }
+
+        // let userInCreatorsFriends = creator.friends.find(friend => friend.userId == userId);
+        // if (!userInCreatorsFriends) {
+        //     throw new Error("User is not the Creators friend");
+        // }
+
+        // is current user part of this queue?
+        if (queue.participantIds.includes(userId)) {
+            return res.status(200).json(queue);
+        }
+
+        queue.participantIds.push(userId);
+        queue = await queue.save();
+
+        return res.status(200).json(queue);
+
+    } catch (err) {
+        return next(err);
+    }
+}
+
+export async function leaveQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            throw new Error("Unable to find Queue");
+        }
+
+        if (userId === queue.creatorId) {
+            return res.status(403).json("Creator cannot leave queue");
+        }
+
+        // is current user part of this queue?
+        if (!queue.participantIds.includes(userId)) {
+            return res.status(200).json(queue);
+        }
+
+        queue.participantIds = queue.participantIds.filter(id => id !== userId);
+        queue = await queue.save();
+
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+export async function removeUserFromQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+        const userIdToRemove = req.params.userId;
+
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            return res.status(404).json("Unable to find queue");
+        }
+
+        if (userId !== queue.creatorId) {
+            return res.status(403).json("Only creator can remove others");
+        }
+
+        if (userIdToRemove === queue.creatorId) {
+            return res.status(400).json("Cannot remove the creator from the queue");
+        }
+
+        queue.participantIds = queue.participantIds.filter(id => id !== userIdToRemove);
+        queue = await queue.save();
+
+        return res.status(200).json(queue);
+    } catch (err) {
+        return next(err);
+    }
 }
