@@ -86,8 +86,16 @@ export async function removeFriend(req: Request, res: Response, next: NextFuncti
 
 export async function searchUsers(req: Request, res: Response, next: NextFunction) {
     try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Unauthorized");
+        }
+
         const query = req.body.query;
-        const users: IUser[] = await User.find({ name: new RegExp(query, "i") }).select("_id name").exec();
+        let users: IUser[] = await User.find({ name: new RegExp(query, "i") }).select("_id name").exec();
+
+        // filter out the current user
+        users = users.filter(user => user._id != userId);
 
         return res.status(200).json({ length: users.length, users });
     } catch (err) {
