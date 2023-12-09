@@ -1,10 +1,12 @@
 import express from "express";
-import { addToQueue, createQueue, getQueue, incrementQueue, pauseQueue, playQueue, removeFromQueue, updateQueue } from "../controllers/queue";
+import { addToQueue, createQueue, getFriendQueues, getQueue, incrementQueue, pauseQueue, playQueue, removeFromQueue, updateQueue } from "../controllers/queue";
 import validateToken from "../middleware/auth";
 
 const router = express.Router();
 
 router.post('/', validateToken, createQueue);
+
+router.get('/friends', validateToken, getFriendQueues);
 
 router.get('/:queueId', validateToken, getQueue);
 

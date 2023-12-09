@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import Queue, { IQueue } from "../models/database/Queue";
+import User, { IUser } from "../models/database/User";
 
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
@@ -247,6 +248,32 @@ export async function deleteQueue(req: Request, res: Response, next: NextFunctio
         if (!queue) {
             throw new Error("Unable to find Queue");
         }
+    } catch (err) {
+        return next(err);
+    }
+}
+
+export async function getFriendQueues(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+
+        let user: IUser | null = await User.findById(userId).select("friends").exec();
+        if (!user) {
+            return res.status(204).json([]);
+        }
+
+        let queues: { _id: string, creatorId: string, creatorName: string | null }[] = [];
+        for (let friend of user.friends) {
+            let queue: IQueue | null = await Queue.findOne({ creatorId: friend.userId }).select("_id creatorId").exec();
+            if (queue) {
+                queues.push({ _id: queue._id, creatorId: queue.creatorId, creatorName: friend.name });
+            }
+        }
+
+        return res.status(200).json({ length: queues.length, queues });
     } catch (err) {
         return next(err);
     }
