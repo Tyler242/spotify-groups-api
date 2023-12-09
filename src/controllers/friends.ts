@@ -102,3 +102,31 @@ export async function searchUsers(req: Request, res: Response, next: NextFunctio
         return next(err);
     }
 }
+
+export async function getName(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Unauthorized");
+        }
+        const friendId = req.params.friendUserId;
+
+        let user = await User.findById(userId).select("friends").exec();
+        if (!user) {
+            throw new Error("Unauthorized");
+        }
+
+        if (!user.friends.find(friend => friend.userId === friendId)) {
+            throw new Error("No friend relationship exists");
+        }
+
+        let friend = await User.findById(friendId).select("name").exec();
+        if (!friend) {
+            throw new Error("User does not exist");
+        }
+
+        return res.status(200).json({ name: friend.name });
+    } catch (err) {
+        return next(err);
+    }
+}
