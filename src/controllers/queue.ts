@@ -235,6 +235,23 @@ export async function playQueue(req: Request, res: Response, next: NextFunction)
     }
 }
 
+export async function deleteQueue(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            throw new Error("Internal Server Error");
+        }
+        const queueId = req.params.queueId;
+
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
+            throw new Error("Unable to find Queue");
+        }
+    } catch (err) {
+        return next(err);
+    }
+}
+
 export async function joinQueue(req: Request, res: Response, next: NextFunction) {
 
 }

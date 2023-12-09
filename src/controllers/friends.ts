@@ -28,7 +28,7 @@ export async function addFriend(req: Request, res: Response, next: NextFunction)
             });
             user = await user.save();
 
-            return res.status(201).json(safeUser(user).friends);
+            return res.status(201).json(safeUser(user));
         }
     } catch (err) {
         return next(err);
@@ -47,7 +47,7 @@ export async function getFriends(req: Request, res: Response, next: NextFunction
             throw new Error("User doesn't exist");
         }
 
-        return res.status(200).json(safeUser(user).friends);
+        return res.status(200).json(safeUser(user));
     } catch (err) {
         return next(err);
     }
@@ -78,7 +78,7 @@ export async function removeFriend(req: Request, res: Response, next: NextFuncti
         user.friends = user.friends.filter(friend => friend.userId !== friendUserId);
         user = await user.save();
 
-        return res.status(200).json(safeUser(user).friends);
+        return res.status(200).json(safeUser(user));
     } catch (err) {
         return next(err);
     }
@@ -89,7 +89,7 @@ export async function searchUsers(req: Request, res: Response, next: NextFunctio
         const query = req.body.query;
         const users: IUser[] = await User.find({ name: new RegExp(query, "i") }).select("_id name").exec();
 
-        return res.status(200).json(users);
+        return res.status(200).json({ length: users.length, users });
     } catch (err) {
         return next(err);
     }
