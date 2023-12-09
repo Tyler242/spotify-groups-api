@@ -10,8 +10,9 @@ export async function authenticate(
     res: Response,
     next: NextFunction,
 ) {
-    const email = req.body.email;
-    const spotifyUuid = req.body.spotifyUuid;
+    const name: string | null = req.body.name || null;
+    const email: string = req.body.email;
+    const spotifyUuid: string = req.body.spotifyUuid;
 
     if (!spotifyUuid || !email) {
         const err: ErrorResult = { message: "Invalid request body", code: HttpStatusCode.BAD_REQUEST };
@@ -27,7 +28,7 @@ export async function authenticate(
 
     try {
         if (!user) {
-            user = await createUser(email, spotifyUuid);
+            user = await createUser(email, spotifyUuid, name);
         }
         loggedInUser = await loginUser(user);
 
@@ -79,8 +80,9 @@ async function loginUser(user: IUser) {
     return updatedUser
 }
 
-async function createUser(email: string, spotifyUuid: string) {
+async function createUser(email: string, spotifyUuid: string, name: string | null) {
     const userModel: IUser = new User({
+        name,
         email,
         spotify_uuid: spotifyUuid,
     });

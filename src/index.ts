@@ -1,13 +1,14 @@
 import express, { type Request, type Response } from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
+import mongoose from "mongoose";
 import { config } from "dotenv";
 
 import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
 import queueRoutes from "./routes/queue";
 import secretRoutes from "./routes/secrets";
-import mongoose from "mongoose";
+import friendRoutes from "./routes/friends";
 
 declare module "express-session" {
   interface SessionData {
@@ -34,6 +35,7 @@ app.use("/auth", authRoutes);
 app.use("/session", sessionRoutes);
 app.use("/queue", queueRoutes);
 app.use("/secrets", secretRoutes);
+app.use("/friends", friendRoutes);
 
 app.get("/", (req, res, next) => {
   res.status(200).json({ message: "Hello World" });
