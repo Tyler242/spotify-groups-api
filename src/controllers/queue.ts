@@ -13,7 +13,7 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         const queueId = req.params.queueId;
 
         // get the queue
-        let queue: IQueue | null = await Queue.findById(queueId).select("queue lengthOfQueue participantIds currentTrack").exec();
+        let queue: IQueue | null = await Queue.findById(queueId).select("queue lengthOfQueue participants currentTrack").exec();
         if (!queue) {
             throw new Error("Unable to find Queue");
         }
