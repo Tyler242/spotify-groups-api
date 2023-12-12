@@ -19,7 +19,7 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -57,7 +57,7 @@ export async function getQueue(req: Request, res: Response, next: NextFunction) 
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
         return res.status(200).json(queue);
@@ -78,9 +78,16 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
 
         // create a queue if there isn't one
         if (!queue) {
+            let user = await User.findById(userId).select("name").exec();
+            if (!user) {
+                return res.status(500).json("Internal Server Error");
+            }
             queue = new Queue({
                 creatorId: userId,
-                participantIds: [userId]
+                participants: [{
+                    userId,
+                    name: user.name
+                }]
             });
             queue = await queue.save();
         }
@@ -107,7 +114,7 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -163,7 +170,7 @@ export async function updateQueue(req: Request, res: Response, next: NextFunctio
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -206,7 +213,7 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -234,7 +241,7 @@ export async function pauseQueue(req: Request, res: Response, next: NextFunction
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -261,7 +268,7 @@ export async function playQueue(req: Request, res: Response, next: NextFunction)
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
 
@@ -348,15 +355,22 @@ export async function joinQueue(req: Request, res: Response, next: NextFunction)
         // }
 
         // is current user part of this queue?
-        if (queue.participantIds.includes(userId)) {
+        if (queue.participants.find(user => user.userId === userId)) {
             return res.status(200).json(queue);
         }
 
-        queue.participantIds.push(userId);
+        let user = await User.findById(userId).select("name").exec();
+        if (!user) {
+            return res.status(500).json("Internal Server Error");
+        }
+
+        queue.participants.push({
+            userId,
+            name: user.name
+        });
         queue = await queue.save();
 
         return res.status(200).json(queue);
-
     } catch (err) {
         return next(err);
     }
@@ -380,11 +394,11 @@ export async function leaveQueue(req: Request, res: Response, next: NextFunction
         }
 
         // is current user part of this queue?
-        if (!queue.participantIds.includes(userId)) {
+        if (!queue.participants.find(user => user.userId === userId)) {
             return res.status(200).json(queue);
         }
 
-        queue.participantIds = queue.participantIds.filter(id => id !== userId);
+        queue.participants = queue.participants.filter(user => user.userId !== userId);
         queue = await queue.save();
 
         return res.status(200).json({ success: true });
@@ -415,7 +429,7 @@ export async function removeUserFromQueue(req: Request, res: Response, next: Nex
             return res.status(400).json("Cannot remove the creator from the queue");
         }
 
-        queue.participantIds = queue.participantIds.filter(id => id !== userIdToRemove);
+        queue.participants = queue.participants.filter(user => user.userId !== userIdToRemove);
         queue = await queue.save();
 
         return res.status(200).json(queue);

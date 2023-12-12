@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { IPlayable, Playable } from "./Playable";
+import { IFriend } from "./User";
 const Schema = mongoose.Schema;
 
 export interface IQueueItem {
@@ -11,7 +12,7 @@ export interface IQueue extends mongoose.Document {
     queue: IQueueItem[];
     lengthOfQueue: number;
     creatorId: string;
-    participantIds: string[];
+    participants: IFriend[];
     isPaused: boolean;
     currentTrack: IQueueItem | null;
     positionMs: number;
@@ -33,7 +34,13 @@ const queueSchema = new Schema({
         type: String,
         required: true
     },
-    participantIds: [String],
+    participants: [{
+        userId: {
+            type: String,
+            required: true
+        },
+        name: String
+    }],
     isPaused: {
         type: Boolean,
         default: true
