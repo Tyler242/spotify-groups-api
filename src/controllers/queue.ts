@@ -28,7 +28,10 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         if (currentLength > 0) {
             queue.queue[currentLength - 1].next = playable;
         } else {
-            queue.currentTrack = playable;
+            queue.currentTrack = {
+                playable,
+                next: null
+            };
         }
         queue.queue.push({ playable, next: null });
         queue.lengthOfQueue = queue.queue.length;
@@ -132,6 +135,8 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
                     return res.status(400).json("Cannot remove current track while playing");
                 }
             }
+
+            queue.currentTrack = queue.queue[0];
             queue = await queue.save();
             return res.status(200).json(queue);
         } else {
@@ -176,6 +181,7 @@ export async function updateQueue(req: Request, res: Response, next: NextFunctio
 
             // reset the next mappings
             queue.queue = setNext(queue.queue);
+            queue.currentTrack = queue.queue[0];
             queue = await queue.save();
 
             return res.status(200).json(queue);
@@ -206,7 +212,7 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
         }
 
         queue.queue.shift();
-        queue.currentTrack = queue.queue[0].playable || null;
+        queue.currentTrack = queue.queue[0] || null;
         queue = await queue.save();
 
         return res.status(200).json(queue);
