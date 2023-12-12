@@ -437,7 +437,7 @@ function getPlayableFromBody(req: Request): IPlayable {
     }
 
     if (body.image) {
-        if (!(body.image.url && body.image.height && body.image.widht)) {
+        if (!(body.image.url && body.image.height && body.image.width)) {
             console.error("invalid image object");
             throw new Error("Bad Request");
         }
