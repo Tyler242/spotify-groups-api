@@ -60,6 +60,9 @@ export async function getQueue(req: Request, res: Response, next: NextFunction) 
         if (!queue.participants.find(user => user.userId === userId)) {
             throw new Error("Unauthorized");
         }
+        setNext(queue.queue);
+        await queue.save();
+
         return res.status(200).json(queue);
     } catch (err) {
         return next(err);
@@ -90,6 +93,9 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
                 }]
             });
             queue = await queue.save();
+        } else {
+            setNext(queue.queue);
+            await queue.save();
         }
 
         return res.status(201).json(queue);
