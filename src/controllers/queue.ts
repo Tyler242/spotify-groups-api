@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import Queue, { IQueue, IQueueItem } from "../models/database/Queue";
 import User, { IUser } from "../models/database/User";
-import { IPlayable, Playable } from "../models/database/Playable";
+import { IPlayable } from "../models/database/Playable";
 
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
