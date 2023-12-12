@@ -5,7 +5,6 @@ import { IPlayable } from "../models/database/Playable";
 
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
-
         const playable = getPlayableFromBody(req);
         const userId = req.userId;
         if (!userId) {
