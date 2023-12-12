@@ -41,7 +41,7 @@ const queueSchema = new Schema({
     currentTrack: {
         playable: Playable || null,
         next: Playable || null
-    } || null,
+    },
     positionMs: Number
 });
 
