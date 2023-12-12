@@ -34,6 +34,7 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         }
         queue.queue.push({ playable, next: null });
         queue.lengthOfQueue = queue.queue.length;
+        queue.currentTrack = queue.queue[0] || null;
 
         queue = await queue.save();
 
@@ -61,6 +62,7 @@ export async function getQueue(req: Request, res: Response, next: NextFunction) 
             throw new Error("Unauthorized");
         }
         setNext(queue.queue);
+        queue.currentTrack = queue.queue[0] || null;
         await queue.save();
 
         return res.status(200).json(queue);
@@ -95,6 +97,7 @@ export async function createQueue(req: Request, res: Response, next: NextFunctio
             queue = await queue.save();
         } else {
             setNext(queue.queue);
+            queue.currentTrack = queue.queue[0] || null;
             await queue.save();
         }
 
@@ -148,7 +151,7 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
                 }
             }
 
-            queue.currentTrack = queue.queue[0];
+            queue.currentTrack = queue.queue[0] || null;
             queue = await queue.save();
             return res.status(200).json(queue);
         } else {
@@ -193,7 +196,7 @@ export async function updateQueue(req: Request, res: Response, next: NextFunctio
 
             // reset the next mappings
             queue.queue = setNext(queue.queue);
-            queue.currentTrack = queue.queue[0];
+            queue.currentTrack = queue.queue[0] || null;
             queue = await queue.save();
 
             return res.status(200).json(queue);
@@ -252,6 +255,7 @@ export async function pauseQueue(req: Request, res: Response, next: NextFunction
         }
 
         queue.isPaused = true;
+        queue.currentTrack = queue.queue[0] || null;
         queue = await queue.save();
 
         return res.status(200).json(queue);
@@ -279,6 +283,8 @@ export async function playQueue(req: Request, res: Response, next: NextFunction)
         }
 
         queue.isPaused = false;
+        queue.currentTrack = queue.queue[0] || null;
+
         queue = await queue.save();
         return res.status(200).json(queue);
     } catch (err) {
