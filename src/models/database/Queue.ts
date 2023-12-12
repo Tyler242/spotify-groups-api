@@ -1,17 +1,34 @@
 import mongoose from "mongoose";
+import { IPlayable, Playable } from "./Playable";
 const Schema = mongoose.Schema;
 
+export interface IQueueItem {
+    playable: IPlayable;
+    next: IPlayable | null;
+}
+
 export interface IQueue extends mongoose.Document {
-    queue: string[];
+    queue: IQueueItem[];
+    lengthOfQueue: number;
     creatorId: string;
     participantIds: string[];
     isPaused: boolean;
-    currentTrack: string | null;
+    currentTrack: IPlayable | null;
     positionMs: number;
 };
 
 const queueSchema = new Schema({
-    queue: [String],
+    queue: [{
+        playable: {
+            type: Playable,
+            required: true
+        },
+        next: Playable || null
+    }],
+    lengthOfQueue: {
+        type: Number,
+        default: 0
+    },
     creatorId: {
         type: String,
         required: true
@@ -21,7 +38,7 @@ const queueSchema = new Schema({
         type: Boolean,
         default: true
     },
-    currentTrack: String,
+    currentTrack: Playable || null,
     positionMs: Number
 });
 

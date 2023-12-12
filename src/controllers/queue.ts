@@ -1,9 +1,12 @@
 import { NextFunction, Request, Response } from "express";
-import Queue, { IQueue } from "../models/database/Queue";
+import Queue, { IQueue, IQueueItem } from "../models/database/Queue";
 import User, { IUser } from "../models/database/User";
+import { IPlayable, Playable } from "../models/database/Playable";
 
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
+
+        const playable = getPlayableFromBody(req);
         const userId = req.userId;
         if (!userId) {
             throw new Error("Internal Server Error");
@@ -11,23 +14,28 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
         const queueId = req.params.queueId;
 
         // get the queue
-        let queueObj: IQueue | null = await Queue.findById(queueId);
-        if (!queueObj) {
+        let queue: IQueue | null = await Queue.findById(queueId).select("queue lengthOfQueue participantIds currentTrack").exec();
+        if (!queue) {
             throw new Error("Unable to find Queue");
         }
 
         // is current user part of this queue?
-        if (!queueObj.participantIds.includes(userId)) {
+        if (!queue.participantIds.includes(userId)) {
             throw new Error("Unauthorized");
         }
 
-        queueObj.queue.push(req.body.trackId);
-        if (queueObj.queue.length == 1) {
-            queueObj.currentTrack = req.body.trackId;
+        let currentLength = queue.lengthOfQueue;
+        if (currentLength > 0) {
+            queue.queue[currentLength - 1].next = playable;
+        } else {
+            queue.currentTrack = playable;
         }
-        queueObj = await queueObj.save();
+        queue.queue.push({ playable, next: null });
+        queue.lengthOfQueue = queue.queue.length;
 
-        return res.status(200).json({ queue: queueObj.queue });
+        queue = await queue.save();
+
+        return res.status(200).json({ queue: queue.queue });
     } catch (err) {
         return next(err);
     }
@@ -91,22 +99,43 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
         const trackId = req.params.trackId;
 
         // get the queue
-        let queueObj: IQueue | null = await Queue.findById(queueId);
-        if (!queueObj) {
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
             throw new Error("Unable to find Queue");
         }
 
         // is current user part of this queue?
-        if (!queueObj.participantIds.includes(userId)) {
+        if (!queue.participantIds.includes(userId)) {
             throw new Error("Unauthorized");
         }
 
-        if (queueObj.queue.includes(trackId)) {
-            queueObj.queue = queueObj.queue.filter(track => track !== trackId);
-            let queue = await queueObj.save();
+        // -1 if not found
+        let index = queue.queue.findIndex(item => item.playable.spotifyId === trackId);
+
+        if (index !== -1) {
+            if (queue.queue[index].next && index > 0) {
+                // not in the head or tail position
+                queue.queue[index - 1].next = queue.queue[index + 1].playable
+                queue.queue = queue.queue.filter(item => item.playable.spotifyId !== trackId);
+                queue.lengthOfQueue = queue.queue.length;
+            } else if (!queue.queue[index].next || index == (queue.lengthOfQueue - 1)) {
+                // in the tail position
+                queue.queue.pop();
+                queue.queue[index - 1].next = null;
+                queue.lengthOfQueue = queue.queue.length;
+            } else if (index == 0) {
+                // in the head position
+                if (queue.isPaused) {
+                    queue.queue.shift();
+                    queue.lengthOfQueue = queue.queue.length;
+                } else {
+                    return res.status(400).json("Cannot remove current track while playing");
+                }
+            }
+            queue = await queue.save();
             return res.status(200).json(queue);
         } else {
-            return res.status(200).json(queueObj);
+            return res.status(400).json("Not in queue");
         }
     } catch (err) {
         return next(err);
@@ -121,31 +150,33 @@ export async function updateQueue(req: Request, res: Response, next: NextFunctio
         }
         const queueId = req.params.queueId;
         const trackId = req.params.trackId;
-        const index = parseInt(req.params.index);
+        const newIndex = parseInt(req.params.index);
 
         // get the queue
-        let queueObj: IQueue | null = await Queue.findById(queueId);
-        if (!queueObj) {
+        let queue: IQueue | null = await Queue.findById(queueId);
+        if (!queue) {
             throw new Error("Unable to find Queue");
         }
 
         // is current user part of this queue?
-        if (!queueObj.participantIds.includes(userId)) {
+        if (!queue.participantIds.includes(userId)) {
             throw new Error("Unauthorized");
         }
 
-        // is the track in the queue?
-        if (queueObj.queue.includes(trackId)) {
+        let currIndex = queue.queue.findIndex(item => item.playable.spotifyId === trackId)
 
-            // remove track
-            queueObj.queue = queueObj.queue.filter(track => track !== trackId);
-            // insert by creating a new array out of the old array
-            queueObj.queue = [
-                ...queueObj.queue.slice(0, index),
-                trackId,
-                ...queueObj.queue.slice(index)
-            ];
-            let queue = await queueObj.save();
+        // is the track in the queue?
+        if (currIndex !== -1) {
+            // switch places
+            let playable = queue.queue[currIndex];
+            let switchPlayable = queue.queue[newIndex];
+
+            queue.queue[newIndex] = playable;
+            queue.queue[currIndex] = switchPlayable;
+
+            // reset the next mappings
+            queue.queue = setNext(queue.queue);
+            queue = await queue.save();
 
             return res.status(200).json(queue);
         } else {
@@ -175,7 +206,7 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
         }
 
         queue.queue.shift();
-        queue.currentTrack = queue.queue[0] || null;
+        queue.currentTrack = queue.queue[0].playable || null;
         queue = await queue.save();
 
         return res.status(200).json(queue);
@@ -204,6 +235,7 @@ export async function pauseQueue(req: Request, res: Response, next: NextFunction
 
         queue.isPaused = true;
         queue = await queue.save();
+
         return res.status(200).json(queue);
     } catch (err) {
         return next(err);
@@ -385,4 +417,44 @@ export async function removeUserFromQueue(req: Request, res: Response, next: Nex
     } catch (err) {
         return next(err);
     }
+}
+
+function getPlayableFromBody(req: Request): IPlayable {
+    let body = req.body;
+    if (!body) {
+        console.error("Missing body");
+        throw new Error("Bad Request");
+    }
+
+    if (!(body.duration && body.name && body.uri && body.spotifyId)) {
+        console.error("Missing a base value");
+        throw new Error("Bad Request");
+    }
+
+    if (body.image) {
+        if (!(body.image.url && body.image.height && body.image.widht)) {
+            console.error("invalid image object");
+            throw new Error("Bad Request");
+        }
+    }
+
+    let playable: IPlayable = {
+        image: body.image || null,
+        artists: body.artists || [],
+        duration: body.duration,
+        name: body.name,
+        uri: body.uri,
+        spotifyId: body.spotifyId
+    };
+    return playable;
+}
+
+function setNext(queue: IQueueItem[]) {
+    let length = queue.length;
+    for (let i = 0; i < length; i++) {
+        if (i < (length - 1)) {
+            queue[i].next = queue[i + 1].playable;
+        }
+    }
+    return queue;
 }
