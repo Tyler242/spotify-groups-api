@@ -38,7 +38,13 @@ const queueSchema = new Schema({
         type: Boolean,
         default: true
     },
-    currentTrack: Playable || null,
+    currentTrack: {
+        playable: {
+            type: Playable,
+            required: true
+        },
+        next: Playable || null
+    } || null,
     positionMs: Number
 });
 
