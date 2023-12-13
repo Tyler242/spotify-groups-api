@@ -6,6 +6,7 @@ import { IPlayable } from "../models/database/Playable";
 export async function addToQueue(req: Request, res: Response, next: NextFunction) {
     try {
         const playable = getPlayableFromBody(req);
+        console.log(playable);
         const userId = req.userId;
         if (!userId) {
             throw new Error("Internal Server Error");
@@ -23,8 +24,10 @@ export async function addToQueue(req: Request, res: Response, next: NextFunction
             throw new Error("Unauthorized");
         }
 
-        let currentLength = queue.lengthOfQueue;
+        let currentLength = queue.queue.length;
         if (currentLength > 0) {
+            console.log(currentLength);
+            console.log(queue.queue[currentLength - 1]);
             queue.queue[currentLength - 1].next = playable;
         } else {
             queue.currentTrack = {
@@ -152,6 +155,7 @@ export async function removeFromQueue(req: Request, res: Response, next: NextFun
             }
 
             queue.currentTrack = queue.queue[0] || null;
+            queue.lengthOfQueue = queue.queue.length;
             queue = await queue.save();
             return res.status(200).json(queue);
         } else {
@@ -228,6 +232,7 @@ export async function incrementQueue(req: Request, res: Response, next: NextFunc
 
         queue.queue.shift();
         queue.currentTrack = queue.queue[0] || null;
+        queue.lengthOfQueue = queue.queue.length;
         queue = await queue.save();
 
         return res.status(200).json(queue);
