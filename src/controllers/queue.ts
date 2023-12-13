@@ -62,7 +62,7 @@ export async function getQueue(req: Request, res: Response, next: NextFunction) 
 
         // is current user part of this queue?
         if (!queue.participants.find(user => user.userId === userId)) {
-            throw new Error("Unauthorized");
+            return res.status(403).json({ participant: false });
         }
         setNext(queue.queue);
         queue.currentTrack = queue.queue[0] || null;
